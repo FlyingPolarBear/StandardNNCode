@@ -3,7 +3,7 @@ Author: Derry
 Email: drlv@mail.ustc.edu.cn
 Date: 2021-07-25 23:39:03
 LastEditors: Derry
-LastEditTime: 2021-08-08 16:57:38
+LastEditTime: 2021-08-10 19:28:17
 Description: Standard main file of a neural network
 '''
 
@@ -14,14 +14,14 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from model import Net
-from utils import load_data
+from model import *
+from utils import *
 
 
 def train(my_model, train_loader, test_loader, args):
     for epoch in range(args.epoch):
+        start = time.time()
         for batch, (X_train, y_train) in enumerate(train_loader):
-            start = time.time()
             my_model.train()
 
             if args.cuda:
@@ -30,6 +30,7 @@ def train(my_model, train_loader, test_loader, args):
 
             optimizer.zero_grad()
             _, loss = my_model(X_train, y_train)
+            print(loss)
             loss.backward()
             optimizer.step()
             scheduler.step(loss)
@@ -63,7 +64,8 @@ if __name__ == "__main__":
     parser.add_argument('--seed', type=int, default=42, help='Random seed.')
     parser.add_argument('--epoch', type=int, default=200,
                         help='Number of epochs to train.')
-    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--batch_size', type=int, default=1024,
+                        help='Number of samples in a batch.')
     parser.add_argument('--n_in', type=int, default=100)
     parser.add_argument('--n_out', type=int, default=100)
     parser.add_argument('--lr', type=float, default=0.01,
@@ -80,15 +82,13 @@ if __name__ == "__main__":
     args.cuda = not args.no_cuda and torch.cuda.is_available()
 
     # Load data
-    X_train, X_test, y_train, y_test = load_data(args)
+    X_train, y_train, X_test, y_test = load_mnist_data(args)
     args.n_in = X_train.shape[1]
     args.n_out = len(set(list(y_train)))
 
     # Construct data loader
-    train_dataset = TensorDataset(torch.tensor(
-        X_train, dtype=torch.float32), torch.tensor(y_train, dtype=torch.long))
-    test_dataset = TensorDataset(torch.tensor(
-        X_test, dtype=torch.float32), torch.tensor(y_test, dtype=torch.long))
+    train_dataset = TensorDataset(X_train, y_train)
+    test_dataset = TensorDataset(X_test, y_test)
     train_loader = DataLoader(train_dataset,
                               batch_size=args.batch_size,
                               shuffle=True)
@@ -97,7 +97,7 @@ if __name__ == "__main__":
                              shuffle=True)
 
     # Model, optimizer and scheduler
-    my_model = Net(args)
+    my_model = CNN(args)
     optimizer = torch.optim.AdamW(my_model.parameters(),
                                   lr=args.lr, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
