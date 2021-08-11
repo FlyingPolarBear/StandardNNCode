@@ -3,7 +3,7 @@ Author: Derry
 Email: drlv@mail.ustc.edu.cn
 Date: 2021-07-25 23:39:03
 LastEditors: Derry
-LastEditTime: 2021-08-10 19:28:17
+LastEditTime: 2021-08-11 17:25:42
 Description: Standard main file of a neural network
 '''
 
@@ -19,6 +19,7 @@ from utils import *
 
 
 def train(my_model, train_loader, test_loader, args):
+    test_loss_all, test_acc_all = [], []
     for epoch in range(args.epoch):
         start = time.time()
         for batch, (X_train, y_train) in enumerate(train_loader):
@@ -30,7 +31,6 @@ def train(my_model, train_loader, test_loader, args):
 
             optimizer.zero_grad()
             _, loss = my_model(X_train, y_train)
-            print(loss)
             loss.backward()
             optimizer.step()
             scheduler.step(loss)
@@ -38,7 +38,10 @@ def train(my_model, train_loader, test_loader, args):
         if not args.fastmode:
             print("Epoch {:4d}".format(epoch),
                   "time= {:.2f}s".format(time.time()-start), end=' ')
-            test(my_model, test_loader, args)
+            test_loss, test_acc = test(my_model, test_loader, args)
+            test_loss_all.append(test_loss.item())
+            test_acc_all.append(test_acc.item())
+            plot(test_loss_all, test_acc_all, args)
 
 
 def test(my_model, test_loader, args):
@@ -51,7 +54,8 @@ def test(my_model, test_loader, args):
 
         print("Test set results:",
               "loss= {:.4f}".format(loss),
-              "accuracy= {:.4f}".format(acc))
+              "accuracy= {:.2f} %".format(100*acc))
+        return loss, 100*acc
 
 
 if __name__ == "__main__":
@@ -62,7 +66,7 @@ if __name__ == "__main__":
     parser.add_argument('--fastmode', action='store_true',
                         default=False, help='Validate during training pass.')
     parser.add_argument('--seed', type=int, default=42, help='Random seed.')
-    parser.add_argument('--epoch', type=int, default=200,
+    parser.add_argument('--epoch', type=int, default=100,
                         help='Number of epochs to train.')
     parser.add_argument('--batch_size', type=int, default=1024,
                         help='Number of samples in a batch.')
@@ -77,6 +81,10 @@ if __name__ == "__main__":
                         help='Number of hidden units.')
     parser.add_argument('--dropout', type=float, default=0.5,
                         help='Dropout rate (1 - keep probability).')
+    parser.add_argument('--data_path', type=str,
+                        default="./data", help='Path of dataset')
+    parser.add_argument('--tmp_path', type=str,
+                        default="./tmp", help='Path of tmporary output')
 
     args = parser.parse_args()
     args.cuda = not args.no_cuda and torch.cuda.is_available()
