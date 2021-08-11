@@ -3,10 +3,11 @@ Author: Derry
 Email: drlv@mail.ustc.edu.cn
 Date: 2021-07-25 23:39:03
 LastEditors: Derry
-LastEditTime: 2021-08-11 17:25:42
+LastEditTime: 2021-08-11 21:24:59
 Description: Standard main file of a neural network
 '''
 
+import os
 import argparse
 import time
 
@@ -18,9 +19,15 @@ from model import *
 from utils import *
 
 
-def train(my_model, train_loader, test_loader, args):
+def train(my_model, train_loader, test_loader, optimizer, scheduler, args, start_epoch=0):
+    if args.pretrained and os.path.exists(args.model_path):
+        my_model, optimizer, scheduler, start_epoch, best_acc = load_pretrained(
+            my_model, optimizer, scheduler, args)
+
     test_loss_all, test_acc_all = [], []
-    for epoch in range(args.epoch):
+    best_acc = 0
+
+    for epoch in range(start_epoch, args.epoch):
         start = time.time()
         for batch, (X_train, y_train) in enumerate(train_loader):
             my_model.train()
@@ -36,11 +43,21 @@ def train(my_model, train_loader, test_loader, args):
             scheduler.step(loss)
 
         if not args.fastmode:
-            print("Epoch {:4d}".format(epoch),
-                  "time= {:.2f}s".format(time.time()-start), end=' ')
+            print("Epoch {:3d}".format(epoch),
+                  "time= {:.2f} s".format(time.time()-start), end=' ')
             test_loss, test_acc = test(my_model, test_loader, args)
-            test_loss_all.append(test_loss.item())
-            test_acc_all.append(test_acc.item())
+
+            if test_acc > best_acc:
+                best_acc = test_acc
+                state = {'model': my_model.state_dict(),
+                         'optimizer': optimizer.state_dict(),
+                         'scheduler': scheduler.state_dict(),
+                         'epoch': epoch,
+                         'accuracy': test_acc}
+                torch.save(state, args.model_path)
+
+            test_loss_all.append(test_loss)
+            test_acc_all.append(test_acc)
             plot(test_loss_all, test_acc_all, args)
 
 
@@ -55,7 +72,7 @@ def test(my_model, test_loader, args):
         print("Test set results:",
               "loss= {:.4f}".format(loss),
               "accuracy= {:.2f} %".format(100*acc))
-        return loss, 100*acc
+        return loss.item(), 100*acc.item()
 
 
 if __name__ == "__main__":
@@ -65,6 +82,8 @@ if __name__ == "__main__":
                         default=False, help='Disables CUDA training.')
     parser.add_argument('--fastmode', action='store_true',
                         default=False, help='Validate during training pass.')
+    parser.add_argument('--pretrained', action='store_true',
+                        default=True, help='Using pretrained model parameter.')
     parser.add_argument('--seed', type=int, default=42, help='Random seed.')
     parser.add_argument('--epoch', type=int, default=100,
                         help='Number of epochs to train.')
@@ -72,7 +91,7 @@ if __name__ == "__main__":
                         help='Number of samples in a batch.')
     parser.add_argument('--n_in', type=int, default=100)
     parser.add_argument('--n_out', type=int, default=100)
-    parser.add_argument('--lr', type=float, default=0.01,
+    parser.add_argument('--lr', type=float, default=0.001,
                         help='Initial learning rate.')
     parser.add_argument('--test_size', type=float, default=0.1)
     parser.add_argument('--weight_decay', type=float, default=5e-4,
@@ -85,6 +104,9 @@ if __name__ == "__main__":
                         default="./data", help='Path of dataset')
     parser.add_argument('--tmp_path', type=str,
                         default="./tmp", help='Path of tmporary output')
+    parser.add_argument('--model_path', type=str,
+                        default="./model/best_model.tar",
+                        help='Path of model parameter')
 
     args = parser.parse_args()
     args.cuda = not args.no_cuda and torch.cuda.is_available()
@@ -118,5 +140,4 @@ if __name__ == "__main__":
         torch.cuda.manual_seed(args.seed)
         my_model.cuda()
 
-    train(my_model, train_loader, test_loader, args)
-    test(my_model, test_loader, args)
+    train(my_model, train_loader, test_loader, optimizer, scheduler, args)

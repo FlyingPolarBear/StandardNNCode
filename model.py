@@ -3,7 +3,7 @@ Author: Derry
 Email: drlv@mail.ustc.edu.cn
 Date: 2021-07-25 23:55:26
 LastEditors: Derry
-LastEditTime: 2021-08-10 19:19:30
+LastEditTime: 2021-08-11 18:29:10
 Description: Standard model file of a neural network
 '''
 

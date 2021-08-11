@@ -3,7 +3,7 @@ Author: Derry
 Email: drlv@mail.ustc.edu.cn
 Date: 2021-07-27 17:05:23
 LastEditors: Derry
-LastEditTime: 2021-08-11 17:27:58
+LastEditTime: 2021-08-11 21:34:39
 Description: Standard utils file of a neural network
 '''
 import torch
@@ -13,12 +13,16 @@ import seaborn as sns
 
 def load_mnist_data(args):
     from torchvision import datasets, transforms
-    train_dataset = datasets.MNIST(args.data_path, train=True,
-                                   transform=transforms.ToTensor(),
-                                   download=False)
-    test_dataset = datasets.MNIST(args.data_path, train=False,
-                                  transform=transforms.ToTensor(),
-                                  download=False)
+    train_dataset = datasets.FashionMNIST(args.data_path, train=True,
+                                          transform=transforms.Compose([
+                                              transforms.ToTensor(),
+                                              transforms.Normalize((0.5,), (0.5,))]),
+                                          download=False)
+    test_dataset = datasets.FashionMNIST(args.data_path, train=False,
+                                         transform=transforms.Compose([
+                                             transforms.ToTensor(),
+                                             transforms.Normalize((0.5,), (0.5,))]),
+                                         download=False)
     return(torch.as_tensor(train_dataset.data, dtype=torch.float32),
            torch.as_tensor(train_dataset.targets, dtype=torch.long),
            torch.as_tensor(test_dataset.data, dtype=torch.float32),
@@ -40,6 +44,7 @@ def load_iris_data(args):
 def plot(loss, acc, args):
     sns.set()
     plt.figure('loss')
+    plt.title("loss of each epoch")
     plt.xlim(0, args.epoch)
     plt.plot(loss, color='b', label='loss')
     plt.xlabel('epoch')
@@ -47,12 +52,25 @@ def plot(loss, acc, args):
     plt.savefig(args.tmp_path+'/loss.png')
 
     plt.figure('acc')
+    plt.title("accurancy of each epoch")
     plt.xlim(0, args.epoch)
-    plt.ylim(90, 100)
+    plt.ylim(min(acc)//10*10, 100)
     plt.plot(acc, color='b', label='accuracy')
     plt.xlabel('epoch')
     plt.ylabel('accuracy')
     plt.savefig(args.tmp_path+'/acc.png')
+
+
+def load_pretrained(my_model, optimizer, scheduler, args):
+    state = torch.load(args.model_path)
+    my_model.load_state_dict(state['model'])
+    optimizer.load_state_dict(state['optimizer'])
+    scheduler.load_state_dict(state['scheduler'])
+    epoch = state['epoch']
+    best_acc = state['accuracy']
+    print("loaded pretrained model: epoch{:3d} acc= {:.2f}".format(
+        epoch, best_acc))
+    return my_model, optimizer, scheduler, epoch+1, best_acc
 
 
 if __name__ == "__main__":
