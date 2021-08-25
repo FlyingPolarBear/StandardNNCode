@@ -3,7 +3,7 @@ Author: Derry
 Email: drlv@mail.ustc.edu.cn
 Date: 2021-07-25 23:39:03
 LastEditors: Derry
-LastEditTime: 2021-08-25 23:52:59
+LastEditTime: 2021-08-26 00:58:54
 Description: Standard main file of a neural network
 '''
 
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     # Training inner arguments
     parser.add_argument('--batch_size', type=int, default=1024,
                         help='Number of samples in a batch.')
-    parser.add_argument('--lr', type=float, default=0.1,
+    parser.add_argument('--lr', type=float, default=0.01,
                         help='Initial learning rate.')
     parser.add_argument('--weight_decay', type=float, default=5e-4,
                         help='Weight decay (L2 loss on parameters).')
@@ -100,7 +100,7 @@ if __name__ == "__main__":
                         help='Number of input units, self-tuning by input data.')
     parser.add_argument('--n_out', type=int, default=100,
                         help='Number of output unit, self-tuning by output data.')
-    parser.add_argument('--n_hid', type=int, default=16,
+    parser.add_argument('--n_hid', type=int, default=128,
                         help='Number of hidden units.')
     parser.add_argument('--dropout', type=float, default=0.5,
                         help='Dropout rate (1 - keep probability).')
@@ -115,7 +115,7 @@ if __name__ == "__main__":
     args.cuda = not args.no_cuda and torch.cuda.is_available()
 
     # Load data
-    X_train, y_train, X_test, y_test = load_iris_data(args)
+    X_train, y_train, X_test, y_test = load_mnist_data(args)
     args.n_in = X_train.shape[1]
     args.n_out = len(set(list(y_train.numpy())))
 
@@ -130,7 +130,7 @@ if __name__ == "__main__":
                              shuffle=True)
 
     # Model, optimizer and scheduler
-    my_model = MLP(args)
+    my_model = CNN(args)
     optimizer = torch.optim.AdamW(my_model.parameters(),
                                   lr=args.lr, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
