@@ -3,7 +3,7 @@ Author: Derry
 Email: drlv@mail.ustc.edu.cn
 Date: 2021-07-25 23:55:26
 LastEditors: Derry
-LastEditTime: 2021-08-11 18:29:10
+LastEditTime: 2021-08-25 23:52:37
 Description: Standard model file of a neural network
 '''
 
@@ -14,9 +14,8 @@ import torch.nn as nn
 class MLP(torch.nn.Module):
     def __init__(self, args):
         super(MLP, self).__init__()
-        n_hid = 64
-        self.hidden = nn.Linear(args.n_in, n_hid)
-        self.out = nn.Linear(n_hid, args.n_out)
+        self.hidden = nn.Linear(args.n_in, args.n_hid)
+        self.out = nn.Linear(args.n_hid, args.n_out)
 
     def forward(self, X, y):
         X = self.hidden(X)
@@ -32,9 +31,8 @@ class MLP(torch.nn.Module):
     def evaluate(self, X, y):
         self.eval()
         y_pred, loss = self.forward(X, y)
-        acc = ((y_pred == y).int().sum().float() /
-               float(y.shape[0])).cpu().numpy()
-        return loss, acc
+        acc = (y_pred == y).int().sum() / y.shape[0]
+        return loss.item(), 100*acc.item()
 
 
 class CNN(nn.Module):

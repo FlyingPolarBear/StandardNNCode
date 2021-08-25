@@ -3,7 +3,7 @@ Author: Derry
 Email: drlv@mail.ustc.edu.cn
 Date: 2021-07-25 23:39:03
 LastEditors: Derry
-LastEditTime: 2021-08-11 21:24:59
+LastEditTime: 2021-08-25 23:52:59
 Description: Standard main file of a neural network
 '''
 
@@ -27,7 +27,7 @@ def train(my_model, train_loader, test_loader, optimizer, scheduler, args, start
     test_loss_all, test_acc_all = [], []
     best_acc = 0
 
-    for epoch in range(start_epoch, args.epoch):
+    for epoch in range(start_epoch+1, args.epoch+1):
         start = time.time()
         for batch, (X_train, y_train) in enumerate(train_loader):
             my_model.train()
@@ -40,7 +40,7 @@ def train(my_model, train_loader, test_loader, optimizer, scheduler, args, start
             _, loss = my_model(X_train, y_train)
             loss.backward()
             optimizer.step()
-            scheduler.step(loss)
+        scheduler.step(loss)
 
         if not args.fastmode:
             print("Epoch {:3d}".format(epoch),
@@ -61,60 +61,63 @@ def train(my_model, train_loader, test_loader, optimizer, scheduler, args, start
             plot(test_loss_all, test_acc_all, args)
 
 
+@torch.no_grad()
 def test(my_model, test_loader, args):
-    with torch.no_grad():
-        for batch, (X_test, y_test) in enumerate(test_loader):
-            if args.cuda:
-                X_test = X_test.cuda()
-                y_test = y_test.cuda()
-            loss, acc = my_model.evaluate(X_test, y_test)
+    for batch, (X_test, y_test) in enumerate(test_loader):
+        if args.cuda:
+            X_test = X_test.cuda()
+            y_test = y_test.cuda()
+        loss, acc = my_model.evaluate(X_test, y_test)
 
-        print("Test set results:",
-              "loss= {:.4f}".format(loss),
-              "accuracy= {:.2f} %".format(100*acc))
-        return loss.item(), 100*acc.item()
+    print("Test set results:",
+          "loss= {:.4f}".format(loss),
+          "accuracy= {:.2f} %".format(acc))
+    return loss, acc
 
 
 if __name__ == "__main__":
     # Training settings
     parser = argparse.ArgumentParser()
-    parser.add_argument('--no_cuda', action='store_true',
-                        default=False, help='Disables CUDA training.')
-    parser.add_argument('--fastmode', action='store_true',
-                        default=False, help='Validate during training pass.')
-    parser.add_argument('--pretrained', action='store_true',
-                        default=True, help='Using pretrained model parameter.')
+    # Training outer arguments
+    parser.add_argument('--no_cuda', action='store_true', default=False,
+                        help='Disables CUDA training.')
     parser.add_argument('--seed', type=int, default=42, help='Random seed.')
+    parser.add_argument('--fastmode', action='store_true', default=False,
+                        help='Validate during training pass.')
+    parser.add_argument('--pretrained', action='store_true', default=False,
+                        help='Using pretrained model parameter.')
     parser.add_argument('--epoch', type=int, default=100,
                         help='Number of epochs to train.')
+    # Training inner arguments
     parser.add_argument('--batch_size', type=int, default=1024,
                         help='Number of samples in a batch.')
-    parser.add_argument('--n_in', type=int, default=100)
-    parser.add_argument('--n_out', type=int, default=100)
-    parser.add_argument('--lr', type=float, default=0.001,
+    parser.add_argument('--lr', type=float, default=0.1,
                         help='Initial learning rate.')
-    parser.add_argument('--test_size', type=float, default=0.1)
     parser.add_argument('--weight_decay', type=float, default=5e-4,
                         help='Weight decay (L2 loss on parameters).')
-    parser.add_argument('--hidden', type=int, default=16,
+    # Model arguments
+    parser.add_argument('--n_in', type=int, default=100,
+                        help='Number of input units, self-tuning by input data.')
+    parser.add_argument('--n_out', type=int, default=100,
+                        help='Number of output unit, self-tuning by output data.')
+    parser.add_argument('--n_hid', type=int, default=16,
                         help='Number of hidden units.')
     parser.add_argument('--dropout', type=float, default=0.5,
                         help='Dropout rate (1 - keep probability).')
-    parser.add_argument('--data_path', type=str,
-                        default="./data", help='Path of dataset')
-    parser.add_argument('--tmp_path', type=str,
-                        default="./tmp", help='Path of tmporary output')
-    parser.add_argument('--model_path', type=str,
-                        default="./model/best_model.tar",
+    # Path arguments
+    parser.add_argument('--data_path', type=str, default="./data",
+                        help='Path of dataset')
+    parser.add_argument('--tmp_path', type=str, default="./tmp",
+                        help='Path of tmporary output')
+    parser.add_argument('--model_path', type=str, default="./model/best_model.tar",
                         help='Path of model parameter')
-
     args = parser.parse_args()
     args.cuda = not args.no_cuda and torch.cuda.is_available()
 
     # Load data
-    X_train, y_train, X_test, y_test = load_mnist_data(args)
+    X_train, y_train, X_test, y_test = load_iris_data(args)
     args.n_in = X_train.shape[1]
-    args.n_out = len(set(list(y_train)))
+    args.n_out = len(set(list(y_train.numpy())))
 
     # Construct data loader
     train_dataset = TensorDataset(X_train, y_train)
@@ -127,7 +130,7 @@ if __name__ == "__main__":
                              shuffle=True)
 
     # Model, optimizer and scheduler
-    my_model = CNN(args)
+    my_model = MLP(args)
     optimizer = torch.optim.AdamW(my_model.parameters(),
                                   lr=args.lr, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)

@@ -3,7 +3,7 @@ Author: Derry
 Email: drlv@mail.ustc.edu.cn
 Date: 2021-07-27 17:05:23
 LastEditors: Derry
-LastEditTime: 2021-08-11 21:34:39
+LastEditTime: 2021-08-25 23:54:57
 Description: Standard utils file of a neural network
 '''
 import torch
@@ -34,7 +34,7 @@ def load_iris_data(args):
     from sklearn.model_selection import train_test_split
     X, y = load_iris(return_X_y=True)
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=args.test_size, random_state=args.seed)
+        X, y, test_size=0.1, random_state=args.seed)
     return (torch.as_tensor(X_train, dtype=torch.float32),
             torch.as_tensor(y_train, dtype=torch.long),
             torch.as_tensor(X_test, dtype=torch.float32),
