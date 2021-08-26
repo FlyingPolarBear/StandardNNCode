@@ -3,12 +3,11 @@ Author: Derry
 Email: drlv@mail.ustc.edu.cn
 Date: 2021-07-25 23:39:03
 LastEditors: Derry
-LastEditTime: 2021-08-26 00:58:54
+LastEditTime: 2021-08-26 14:16:04
 Description: Standard main file of a neural network
 '''
-
-import os
 import argparse
+import os
 import time
 
 import numpy as np
@@ -37,7 +36,8 @@ def train(my_model, train_loader, test_loader, optimizer, scheduler, args, start
                 y_train = y_train.cuda()
 
             optimizer.zero_grad()
-            _, loss = my_model(X_train, y_train)
+            y_out = my_model(X_train)
+            loss = loss_fun(y_out, y_train)
             loss.backward()
             optimizer.step()
         scheduler.step(loss)
@@ -45,7 +45,7 @@ def train(my_model, train_loader, test_loader, optimizer, scheduler, args, start
         if not args.fastmode:
             print("Epoch {:3d}".format(epoch),
                   "time= {:.2f} s".format(time.time()-start), end=' ')
-            test_loss, test_acc = test(my_model, test_loader, args)
+            test_loss, test_acc = test(my_model, test_loader, loss_fun, args)
 
             if test_acc > best_acc:
                 best_acc = test_acc
@@ -62,16 +62,19 @@ def train(my_model, train_loader, test_loader, optimizer, scheduler, args, start
 
 
 @torch.no_grad()
-def test(my_model, test_loader, args):
+def test(my_model, test_loader, loss_fun, args):
+    loss_all, acc_all = 0, 0
     for batch, (X_test, y_test) in enumerate(test_loader):
         if args.cuda:
             X_test = X_test.cuda()
             y_test = y_test.cuda()
-        loss, acc = my_model.evaluate(X_test, y_test)
+        loss, acc = evaluate(my_model, X_test, y_test, loss_fun)
+        loss_all += loss
+        acc_all += acc
 
     print("Test set results:",
-          "loss= {:.4f}".format(loss),
-          "accuracy= {:.2f} %".format(acc))
+          "loss= {:.4f}".format(loss_all/len(test_loader)),
+          "accuracy= {:.2f} %".format(acc_all/len(test_loader)))
     return loss, acc
 
 
@@ -129,8 +132,9 @@ if __name__ == "__main__":
                              batch_size=args.batch_size,
                              shuffle=True)
 
-    # Model, optimizer and scheduler
+    # Model, loss function, optimizer and scheduler
     my_model = CNN(args)
+    loss_fun = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(my_model.parameters(),
                                   lr=args.lr, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)

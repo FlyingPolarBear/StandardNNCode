@@ -3,29 +3,31 @@ Author: Derry
 Email: drlv@mail.ustc.edu.cn
 Date: 2021-07-27 17:05:23
 LastEditors: Derry
-LastEditTime: 2021-08-25 23:54:57
+LastEditTime: 2021-08-26 12:36:16
 Description: Standard utils file of a neural network
 '''
-import torch
 import matplotlib.pyplot as plt
 import seaborn as sns
+import torch
 
 
 def load_mnist_data(args):
     from torchvision import datasets, transforms
+    transform = transforms.Compose([
+        transforms.Resize((96, 96)),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5,), (0.5,))])
     train_dataset = datasets.FashionMNIST(args.data_path, train=True,
-                                          transform=transforms.Compose([
-                                              transforms.ToTensor(),
-                                              transforms.Normalize((0.5,), (0.5,))]),
+                                          transform=transform,
                                           download=False)
     test_dataset = datasets.FashionMNIST(args.data_path, train=False,
-                                         transform=transforms.Compose([
-                                             transforms.ToTensor(),
-                                             transforms.Normalize((0.5,), (0.5,))]),
+                                         transform=transform,
                                          download=False)
-    return(torch.as_tensor(train_dataset.data, dtype=torch.float32),
+    return(torch.as_tensor(train_dataset.data.unsqueeze(1).repeat(1,3,1,1), dtype=torch.float32),
            torch.as_tensor(train_dataset.targets, dtype=torch.long),
-           torch.as_tensor(test_dataset.data, dtype=torch.float32),
+           torch.as_tensor(test_dataset.data.unsqueeze(1).repeat(1,3,1,1),
+                           dtype=torch.float32),
            torch.as_tensor(test_dataset.targets, dtype=torch.long))
 
 
@@ -39,6 +41,16 @@ def load_iris_data(args):
             torch.as_tensor(y_train, dtype=torch.long),
             torch.as_tensor(X_test, dtype=torch.float32),
             torch.as_tensor(y_test, dtype=torch.long))
+
+
+def evaluate(model, X, y, loss_fun):
+    model.eval()
+    y_out = model(X)
+    poss = torch.nn.functional.softmax(y_out, dim=1)
+    y_pred = torch.max(poss, 1)[1]
+    loss = loss_fun(y_out, y)
+    acc = (y_pred == y).int().sum() / y.shape[0]
+    return loss.item(), 100*acc.item()
 
 
 def plot(loss, acc, args):
@@ -71,7 +83,3 @@ def load_pretrained(my_model, optimizer, scheduler, args):
     print("loaded pretrained model: epoch{:3d} acc= {:.2f}".format(
         epoch, best_acc))
     return my_model, optimizer, scheduler, epoch+1, best_acc
-
-
-if __name__ == "__main__":
-    load_mnist_data('')
