@@ -3,7 +3,7 @@ Author: Derry
 Email: drlv@mail.ustc.edu.cn
 Date: 2021-07-25 23:39:03
 LastEditors: Derry
-LastEditTime: 2021-08-26 14:16:04
+LastEditTime: 2021-08-26 15:58:27
 Description: Standard main file of a neural network
 '''
 import argparse
@@ -13,6 +13,7 @@ import time
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, TensorDataset
+import torchvision
 
 from model import *
 from utils import *
@@ -22,11 +23,11 @@ def train(my_model, train_loader, test_loader, optimizer, scheduler, args, start
     if args.pretrained and os.path.exists(args.model_path):
         my_model, optimizer, scheduler, start_epoch, best_acc = load_pretrained(
             my_model, optimizer, scheduler, args)
+    else:
+        best_acc = 0
 
     test_loss_all, test_acc_all = [], []
-    best_acc = 0
-
-    for epoch in range(start_epoch+1, args.epoch+1):
+    for epoch in range(start_epoch, args.epoch):
         start = time.time()
         for batch, (X_train, y_train) in enumerate(train_loader):
             my_model.train()
@@ -134,6 +135,7 @@ if __name__ == "__main__":
 
     # Model, loss function, optimizer and scheduler
     my_model = CNN(args)
+    # my_model = torchvision.models.resnet18()
     loss_fun = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(my_model.parameters(),
                                   lr=args.lr, weight_decay=args.weight_decay)

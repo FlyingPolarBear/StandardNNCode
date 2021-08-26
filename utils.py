@@ -3,7 +3,7 @@ Author: Derry
 Email: drlv@mail.ustc.edu.cn
 Date: 2021-07-27 17:05:23
 LastEditors: Derry
-LastEditTime: 2021-08-26 12:36:16
+LastEditTime: 2021-08-26 15:53:04
 Description: Standard utils file of a neural network
 '''
 import matplotlib.pyplot as plt
@@ -47,7 +47,7 @@ def evaluate(model, X, y, loss_fun):
     model.eval()
     y_out = model(X)
     poss = torch.nn.functional.softmax(y_out, dim=1)
-    y_pred = torch.max(poss, 1)[1]
+    y_pred = torch.argmax(poss, 1)
     loss = loss_fun(y_out, y)
     acc = (y_pred == y).int().sum() / y.shape[0]
     return loss.item(), 100*acc.item()
