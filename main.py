@@ -3,7 +3,7 @@ Author: Derry
 Email: drlv@mail.ustc.edu.cn
 Date: 2021-07-25 23:39:03
 LastEditors: Derry
-LastEditTime: 2021-08-26 15:58:27
+LastEditTime: 2021-08-27 12:08:46
 Description: Standard main file of a neural network
 '''
 import argparse
@@ -13,18 +13,15 @@ import time
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, TensorDataset
-import torchvision
 
 from model import *
 from utils import *
 
 
-def train(my_model, train_loader, test_loader, optimizer, scheduler, args, start_epoch=0):
+def train(my_model, train_loader, test_loader, optimizer, args, start_epoch=0, best_acc=0):
     if args.pretrained and os.path.exists(args.model_path):
-        my_model, optimizer, scheduler, start_epoch, best_acc = load_pretrained(
-            my_model, optimizer, scheduler, args)
-    else:
-        best_acc = 0
+        my_model, optimizer, start_epoch, best_acc = load_pretrained(
+            my_model, optimizer,  args)
 
     test_loss_all, test_acc_all = [], []
     for epoch in range(start_epoch, args.epoch):
@@ -41,19 +38,18 @@ def train(my_model, train_loader, test_loader, optimizer, scheduler, args, start
             loss = loss_fun(y_out, y_train)
             loss.backward()
             optimizer.step()
-        scheduler.step(loss)
 
         if not args.fastmode:
             print("Epoch {:3d}".format(epoch),
                   "time= {:.2f} s".format(time.time()-start), end=' ')
             test_loss, test_acc = test(my_model, test_loader, loss_fun, args)
 
+            # Saving the best model
             if test_acc > best_acc:
                 best_acc = test_acc
                 state = {'model': my_model.state_dict(),
                          'optimizer': optimizer.state_dict(),
-                         'scheduler': scheduler.state_dict(),
-                         'epoch': epoch,
+                         'epoch': epoch+1,
                          'accuracy': test_acc}
                 torch.save(state, args.model_path)
 
@@ -83,19 +79,20 @@ if __name__ == "__main__":
     # Training settings
     parser = argparse.ArgumentParser()
     # Training outer arguments
+    parser.add_argument('--seed', type=int, default=42,
+                        help='Random seed.')
     parser.add_argument('--no_cuda', action='store_true', default=False,
                         help='Disables CUDA training.')
-    parser.add_argument('--seed', type=int, default=42, help='Random seed.')
     parser.add_argument('--fastmode', action='store_true', default=False,
                         help='Validate during training pass.')
-    parser.add_argument('--pretrained', action='store_true', default=False,
+    parser.add_argument('--pretrained', action='store_true', default=True,
                         help='Using pretrained model parameter.')
-    parser.add_argument('--epoch', type=int, default=100,
+    parser.add_argument('--epoch', type=int, default=1000,
                         help='Number of epochs to train.')
     # Training inner arguments
     parser.add_argument('--batch_size', type=int, default=1024,
                         help='Number of samples in a batch.')
-    parser.add_argument('--lr', type=float, default=0.01,
+    parser.add_argument('--lr', type=float, default=0.001,
                         help='Initial learning rate.')
     parser.add_argument('--weight_decay', type=float, default=5e-4,
                         help='Weight decay (L2 loss on parameters).')
@@ -133,13 +130,12 @@ if __name__ == "__main__":
                              batch_size=args.batch_size,
                              shuffle=True)
 
-    # Model, loss function, optimizer and scheduler
+    # Model, loss function and optimizer
     my_model = CNN(args)
     # my_model = torchvision.models.resnet18()
     loss_fun = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(my_model.parameters(),
                                   lr=args.lr, weight_decay=args.weight_decay)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
 
     # Set random seed
     np.random.seed(args.seed)
@@ -149,4 +145,4 @@ if __name__ == "__main__":
         torch.cuda.manual_seed(args.seed)
         my_model.cuda()
 
-    train(my_model, train_loader, test_loader, optimizer, scheduler, args)
+    train(my_model, train_loader, test_loader, optimizer, args)

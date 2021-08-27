@@ -3,7 +3,7 @@ Author: Derry
 Email: drlv@mail.ustc.edu.cn
 Date: 2021-07-27 17:05:23
 LastEditors: Derry
-LastEditTime: 2021-08-26 15:53:04
+LastEditTime: 2021-08-26 16:28:22
 Description: Standard utils file of a neural network
 '''
 import matplotlib.pyplot as plt
@@ -73,13 +73,12 @@ def plot(loss, acc, args):
     plt.savefig(args.tmp_path+'/acc.png')
 
 
-def load_pretrained(my_model, optimizer, scheduler, args):
+def load_pretrained(my_model, optimizer, args):
     state = torch.load(args.model_path)
     my_model.load_state_dict(state['model'])
     optimizer.load_state_dict(state['optimizer'])
-    scheduler.load_state_dict(state['scheduler'])
     epoch = state['epoch']
     best_acc = state['accuracy']
     print("loaded pretrained model: epoch{:3d} acc= {:.2f}".format(
         epoch, best_acc))
-    return my_model, optimizer, scheduler, epoch+1, best_acc
+    return my_model, optimizer, epoch+1, best_acc
