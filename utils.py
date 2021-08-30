@@ -3,7 +3,7 @@ Author: Derry
 Email: drlv@mail.ustc.edu.cn
 Date: 2021-07-27 17:05:23
 LastEditors: Derry
-LastEditTime: 2021-08-26 16:28:22
+LastEditTime: 2021-08-30 21:41:40
 Description: Standard utils file of a neural network
 '''
 import matplotlib.pyplot as plt
@@ -45,10 +45,9 @@ def load_iris_data(args):
 
 def evaluate(model, X, y, loss_fun):
     model.eval()
-    y_out = model(X)
-    poss = torch.nn.functional.softmax(y_out, dim=1)
-    y_pred = torch.argmax(poss, 1)
-    loss = loss_fun(y_out, y)
+    y_poss = model(X)
+    loss = loss_fun(y_poss, y)
+    y_pred = torch.argmax(y_poss, 1)
     acc = (y_pred == y).int().sum() / y.shape[0]
     return loss.item(), 100*acc.item()
 

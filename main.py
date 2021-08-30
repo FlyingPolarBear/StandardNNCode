@@ -3,7 +3,7 @@ Author: Derry
 Email: drlv@mail.ustc.edu.cn
 Date: 2021-07-25 23:39:03
 LastEditors: Derry
-LastEditTime: 2021-08-27 12:08:46
+LastEditTime: 2021-08-30 21:56:59
 Description: Standard main file of a neural network
 '''
 import argparse
@@ -34,8 +34,8 @@ def train(my_model, train_loader, test_loader, optimizer, args, start_epoch=0, b
                 y_train = y_train.cuda()
 
             optimizer.zero_grad()
-            y_out = my_model(X_train)
-            loss = loss_fun(y_out, y_train)
+            y_poss = my_model(X_train)
+            loss = loss_fun(y_poss, y_train)
             loss.backward()
             optimizer.step()
 
@@ -85,9 +85,9 @@ if __name__ == "__main__":
                         help='Disables CUDA training.')
     parser.add_argument('--fastmode', action='store_true', default=False,
                         help='Validate during training pass.')
-    parser.add_argument('--pretrained', action='store_true', default=True,
+    parser.add_argument('--pretrained', action='store_true', default=False,
                         help='Using pretrained model parameter.')
-    parser.add_argument('--epoch', type=int, default=1000,
+    parser.add_argument('--epoch', type=int, default=200,
                         help='Number of epochs to train.')
     # Training inner arguments
     parser.add_argument('--batch_size', type=int, default=1024,
@@ -116,6 +116,7 @@ if __name__ == "__main__":
     args.cuda = not args.no_cuda and torch.cuda.is_available()
 
     # Load data
+    # X_train, y_train, X_test, y_test = load_iris_data(args)
     X_train, y_train, X_test, y_test = load_mnist_data(args)
     args.n_in = X_train.shape[1]
     args.n_out = len(set(list(y_train.numpy())))
@@ -131,6 +132,7 @@ if __name__ == "__main__":
                              shuffle=True)
 
     # Model, loss function and optimizer
+    # my_model = MLP(args)
     my_model = CNN(args)
     # my_model = torchvision.models.resnet18()
     loss_fun = nn.CrossEntropyLoss()

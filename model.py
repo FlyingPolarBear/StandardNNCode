@@ -3,7 +3,7 @@ Author: Derry
 Email: drlv@mail.ustc.edu.cn
 Date: 2021-07-25 23:55:26
 LastEditors: Derry
-LastEditTime: 2021-08-26 12:41:55
+LastEditTime: 2021-08-30 21:48:58
 Description: Standard model file of a neural network
 '''
 import torch
@@ -25,7 +25,8 @@ class MLP(torch.nn.Module):
         X = self.batchnorm(X)
         X = self.dropout(X)
         y_out = self.out(X)
-        return y_out
+        y_poss = torch.nn.functional.softmax(y_out, dim=1)
+        return y_poss
 
 
 class CNN(nn.Module):
@@ -80,4 +81,5 @@ class CNN(nn.Module):
         x = self.conv4(x)
         x = self.fn1(x.view(x.size(0), -1))
         y_out = self.fn2(x)
-        return y_out
+        y_poss = torch.nn.functional.softmax(y_out, dim=1)
+        return y_poss
